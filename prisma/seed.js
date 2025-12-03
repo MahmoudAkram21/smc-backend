@@ -30,8 +30,9 @@ async function main() {
   // Create Product Categories
   console.log('📦 Creating product categories...');
   // Use $queryRaw to avoid Prisma MariaDB adapter issue with reserved keyword 'order'
+  // Use INSERT IGNORE to skip duplicates
   await prisma.$queryRaw`
-    INSERT INTO product_categories (name, nameAr, slug, \`order\`, status, created_at, updated_at)
+    INSERT IGNORE INTO product_categories (name, nameAr, slug, \`order\`, status, created_at, updated_at)
     VALUES 
     ('Industrial Products', 'المنتجات الصناعية', 'industrial', 1, 'active', NOW(), NOW()),
     ('Mining Products', 'منتجات التعدين', 'mining', 2, 'active', NOW(), NOW()),
@@ -40,11 +41,11 @@ async function main() {
   
   // Get created categories for product relations
   const categories = await prisma.$queryRaw`
-    SELECT * FROM product_categories ORDER BY \`order\` ASC
+    SELECT * FROM product_categories WHERE slug IN ('industrial', 'mining', 'construction')
   `;
-  const industrialCategory = categories[0];
-  const miningCategory = categories[1];
-  const constructionCategory = categories[2];
+  const industrialCategory = categories.find(c => c.slug === 'industrial');
+  const miningCategory = categories.find(c => c.slug === 'mining');
+  const constructionCategory = categories.find(c => c.slug === 'construction');
   console.log('✅ Product categories created\n');
 
   // Create Products
@@ -81,7 +82,7 @@ async function main() {
   });
 
   await prisma.$queryRaw`
-    INSERT INTO products (name, nameAr, category_id, category, status, views, description, descriptionAr, image, gallery, specifications_table, created_at, updated_at)
+    INSERT IGNORE INTO products (name, nameAr, category_id, category, status, views, description, descriptionAr, image, gallery, specifications_table, created_at, updated_at)
     VALUES 
     ('Heavy Duty Excavator', 'حفار ثقيل', ${miningCategory.id}, 'Mining', 'active', 150, 'High-performance excavator for mining operations', 'حفار عالي الأداء لعمليات التعدين', NULL, NULL, ${spec1}, NOW(), NOW()),
     ('Industrial Conveyor Belt', 'سير ناقل صناعي', ${industrialCategory.id}, 'Industrial', 'active', 200, 'Durable conveyor belt system for industrial applications', 'نظام سير ناقل متين للتطبيقات الصناعية', NULL, NULL, ${spec2}, NOW(), NOW()),
@@ -116,6 +117,7 @@ async function main() {
         image: null,
       },
     ],
+    skipDuplicates: true,
   });
   console.log('✅ News articles created\n');
 
@@ -123,7 +125,7 @@ async function main() {
   console.log('🎨 Creating banners...');
   // Use $queryRaw to avoid Prisma MariaDB adapter issue with reserved keyword 'order'
   await prisma.$queryRaw`
-    INSERT INTO banners (image, title, titleAr, subtitle, subtitleAr, description, descriptionAr, \`order\`, active, created_at, updated_at)
+    INSERT IGNORE INTO banners (image, title, titleAr, subtitle, subtitleAr, description, descriptionAr, \`order\`, active, created_at, updated_at)
     VALUES 
     (NULL, 'Welcome to SMC', 'مرحباً بكم في SMC', 'Your Trusted Partner', 'شريكك الموثوق', 'Leading provider of industrial and mining solutions', 'المزود الرائد للحلول الصناعية والتعدينية', 1, true, NOW(), NOW()),
     (NULL, 'Quality Products', 'منتجات عالية الجودة', 'Built to Last', 'مصممة لتدوم', 'Premium quality products for your business needs', 'منتجات عالية الجودة لاحتياجات عملك', 2, true, NOW(), NOW())
@@ -156,6 +158,7 @@ async function main() {
         permissions: ['read'],
       },
     ],
+    skipDuplicates: true,
   });
   console.log('✅ Users created\n');
 
@@ -163,7 +166,7 @@ async function main() {
   console.log('👥 Creating board members...');
   // Use $queryRaw to avoid Prisma MariaDB adapter issue with reserved keyword 'order'
   await prisma.$queryRaw`
-    INSERT INTO members (name, nameAr, title, titleAr, \`order\`, status, created_at, updated_at)
+    INSERT IGNORE INTO members (name, nameAr, title, titleAr, \`order\`, status, created_at, updated_at)
     VALUES 
     ('John Doe', 'جون دو', 'CEO', 'الرئيس التنفيذي', 1, 'active', NOW(), NOW()),
     ('Jane Smith', 'جين سميث', 'CTO', 'رئيس التكنولوجيا', 2, 'active', NOW(), NOW()),
@@ -175,7 +178,7 @@ async function main() {
   console.log('🏢 Creating clients...');
   // Use $queryRaw to avoid Prisma MariaDB adapter issue with reserved keyword 'order'
   await prisma.$queryRaw`
-    INSERT INTO clients (name, nameAr, logo, website, \`order\`, status, created_at, updated_at)
+    INSERT IGNORE INTO clients (name, nameAr, logo, website, \`order\`, status, created_at, updated_at)
     VALUES 
     ('ABC Corporation', 'شركة ABC', NULL, 'https://abc.com', 1, 'active', NOW(), NOW()),
     ('XYZ Industries', 'صناعات XYZ', NULL, 'https://xyz.com', 2, 'active', NOW(), NOW()),
@@ -192,6 +195,7 @@ async function main() {
       { year: '2023', revenue: 70000000, profit: 15000000 },
       { year: '2024', revenue: 78000000, profit: 18000000 },
     ],
+    skipDuplicates: true,
   });
 
   await prisma.financialProduction.createMany({
@@ -201,6 +205,7 @@ async function main() {
       { month: 'March', production: 6000, target: 6000 },
       { month: 'April', production: 5800, target: 6000 },
     ],
+    skipDuplicates: true,
   });
 
   await prisma.financialExport.createMany({
@@ -210,6 +215,7 @@ async function main() {
       { name: 'Africa', value: 20.1, color: '#FF9800' },
       { name: 'Americas', value: 16.1, color: '#F44336' },
     ],
+    skipDuplicates: true,
   });
   console.log('✅ Financial data created\n');
 
@@ -222,6 +228,7 @@ async function main() {
       { key: 'company_phone', valueEn: '+1234567890', valueAr: '+1234567890' },
       { key: 'company_address', valueEn: '123 Main Street, City, Country', valueAr: '123 الشارع الرئيسي، المدينة، البلد' },
     ],
+    skipDuplicates: true,
   });
   console.log('✅ Site settings created\n');
 
@@ -254,6 +261,7 @@ async function main() {
         valueAr: 'تواصل مع فريقنا.',
       },
     ],
+    skipDuplicates: true,
   });
   console.log('✅ Page content created\n');
 
